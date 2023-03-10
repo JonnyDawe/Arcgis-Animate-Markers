@@ -7,6 +7,7 @@ import MapView from "@arcgis/core/views/MapView";
 
 import { SymbolAnimationManager } from "./Utils/AnimationManager";
 import { MarkerClickPopAnimation } from "./Utils/MarkerClickPop";
+import { MarkerRadarPingAnimation } from "./Utils/MarkerRadarPing";
 
 const map = new Map({
     basemap: new Basemap({ portalItem: { id: "a8c045aa74d643cc9e2fa2702cc4cb45" } })
@@ -29,7 +30,7 @@ const featureLayer = new FeatureLayer({
 
 map.add(featureLayer);
 
-mapView.whenLayerView(featureLayer).then((layerView) => {
+mapView.whenLayerView(featureLayer).then(async (layerView) => {
     const symbolAnimationManager = new SymbolAnimationManager({
         mapView,
         layerView
@@ -40,5 +41,15 @@ mapView.whenLayerView(featureLayer).then((layerView) => {
         mapView,
         layerView,
         scaleFactor: 1.5
+    });
+
+    const result = await featureLayer.queryFeatures({
+        where: "1=1",
+        returnGeometry: true
+    });
+
+    new MarkerRadarPingAnimation({
+        symbolAnimationManager,
+        graphics: result.features
     });
 });

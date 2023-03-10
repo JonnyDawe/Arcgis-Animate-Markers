@@ -3,7 +3,7 @@ import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer.js";
 import FeatureEffect from "@arcgis/core/layers/support/FeatureEffect.js";
 import FeatureFilter from "@arcgis/core/layers/support/FeatureFilter.js";
 import FeatureLayerView from "@arcgis/core/views/layers/FeatureLayerView";
-import { AnimationProps, SpringValue } from "@react-spring/web";
+import { AnimationProps, EasingFunction, easings, SpringValue } from "@react-spring/web";
 
 export type AnimatableLayerView =
     | __esri.FeatureLayerView
@@ -31,11 +31,25 @@ export interface ISpringEasingConfig {
     options?: AnimationProps["config"];
 }
 
+type easingTypes =
+    | "linear"
+    | "easeInCubic"
+    | "easeOutCubic"
+    | "easeInOutCubic"
+    | "easeInExpo"
+    | "easeOutExpo"
+    | "easeInOutExpo"
+    | "easeInOutQuad";
 export interface IStandardEasingConfig {
     type: "easing";
     options?: {
+        easingFunction: easingTypes | EasingFunction;
         duration: number;
     };
+}
+
+interface IGraphicWithUID extends Graphic {
+    uid: number;
 }
 
 export interface IAnimatedGraphic extends Graphic {
@@ -64,7 +78,8 @@ export class SymbolAnimationManager {
     private mapView: __esri.MapView;
 
     /** The layerview that will be animated. 
-     *  - If the layer is a **graphics layer**, then the symbols can be
+     *  - [TO REVIEW: HAS IMPLICATOINS ON POPUP BEHAVIOUR OF THE GRAPHICS LAYER]
+     * If the layer is a **graphics layer**, then the symbols can be
         modified directly and overlay graphics can be added directly to the
         layer. 
         - If the layer is of **any other animatable type**, a new graphics layer
@@ -190,7 +205,10 @@ export class SymbolAnimationManager {
         } else {
             // make a new animated graphic and add it to a new grapics layer.
             this.animationGraphicsLayer.add(newAnimatedGraphic);
-            this.addExcludedFeature(objectId);
+
+            if (!isOverlay) {
+                this.addExcludedFeature(objectId);
+            }
         }
 
         return newAnimatedGraphic;
@@ -217,7 +235,7 @@ export class SymbolAnimationManager {
     }
 
     private getGraphicId(graphic: __esri.Graphic) {
-        return graphic.getObjectId() ?? (graphic as any).uid;
+        return graphic.getObjectId() ?? `${(graphic as IGraphicWithUID).uid}-uid`;
     }
 }
 
@@ -354,15 +372,16 @@ class GraphicSymbolAnimation {
 
     public animateSymbol(animationProps: IAnimationProps, onStep: onSymbolAnimationStep) {
         const currentSymbol = (this.graphic.symbol as any).clone();
-        const easingType = this.easingConfig.type;
+
         const springEasing =
-            easingType === "spring"
+            this.easingConfig.type === "spring"
                 ? new SpringValue(0, { to: 1, config: this.easingConfig.options })
                 : null;
 
         this.abortCurrentAnimation?.();
         animationProps?.onStart?.();
         let abort = false;
+
         const step: FrameRequestCallback = (timestamp) => {
             if (this.animationStartTimeStamp === 0) {
                 this.animationStartTimeStamp = timestamp;
@@ -375,31 +394,42 @@ class GraphicSymbolAnimation {
             }
 
             if (
-                (easingType === "easing" &&
-                    elapsed < (this.easingConfig?.options?.duration ?? 0)) ||
-                springEasing?.idle !== true
+                (this.easingConfig.type === "easing" &&
+                    elapsed > (this.easingConfig.options?.duration ?? 0)) ||
+                springEasing?.idle === true
             ) {
-                if (springEasing) {
-                    springEasing.advance(elapsed);
-                    console.log(springEasing?.get());
-                }
-
-                const animationProgress =
-                    easingType === "spring"
-                        ? springEasing?.get() ?? 0
-                        : this.easeOutQuad(elapsed / (this.easingConfig.options?.duration ?? 0));
-
-                this.graphic.symbol = onStep(
-                    animationProgress,
-                    this.originalSymbol,
-                    currentSymbol,
-                    animationProps
-                );
-                window.requestAnimationFrame(step);
-            } else {
                 this.resetAnimationTimeStamp();
                 animationProps?.onFinish?.();
+                return;
             }
+
+            let animationProgress = 0;
+            switch (this.easingConfig.type) {
+                case "easing": {
+                    animationProgress = this.calculateEasingProgress(
+                        this.easingConfig.options?.easingFunction ?? "linear",
+                        elapsed / (this.easingConfig.options?.duration ?? 0)
+                    );
+
+                    break;
+                }
+                case "spring": {
+                    if (springEasing) {
+                        springEasing.advance(elapsed);
+                        animationProgress = springEasing?.get();
+
+                        break;
+                    }
+                }
+            }
+
+            this.graphic.symbol = onStep(
+                animationProgress,
+                this.originalSymbol,
+                currentSymbol,
+                animationProps
+            );
+            window.requestAnimationFrame(step);
         };
 
         window.requestAnimationFrame(step);
@@ -410,5 +440,13 @@ class GraphicSymbolAnimation {
 
     public resetSymbol() {
         this.graphic.symbol = this.originalSymbol;
+    }
+
+    private calculateEasingProgress(easing: easingTypes | EasingFunction, t: number) {
+        if (typeof easing === "function") {
+            return easing(t);
+        } else {
+            return easings[easing](t);
+        }
     }
 }
