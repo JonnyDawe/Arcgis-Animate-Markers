@@ -1,0 +1,1 @@
+import{b_ as n,lG as s}from"./vendor-e7703df7.js";import{a as u}from"./queryTopFeatures-66045df2.js";async function f(o,t,a){const r=n(o);return(await u(r,s.from(t),{...a})).data.count}export{f as executeForTopCount};
