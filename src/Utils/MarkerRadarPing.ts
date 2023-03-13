@@ -16,7 +16,6 @@ export class MarkerRadarPingAnimation {
         graphics: Graphic[];
     }) {
         this.symbolAnimationManager = symbolAnimationManager;
-
         this.intervalId = this.animateRandomItem(graphics);
     }
 
@@ -30,9 +29,9 @@ export class MarkerRadarPingAnimation {
                 color: [255, 255, 255, 0],
                 size: 30,
                 outline: {
-                    color: [255, 0, 0, 0.7],
+                    color: [255, 0, 0, 0.5],
                     style: "solid",
-                    width: 5
+                    width: 4
                 }
             });
             const newAnimatedGraphic = this.symbolAnimationManager.makeAnimatableSymbol({
@@ -41,13 +40,13 @@ export class MarkerRadarPingAnimation {
                     type: "easing",
                     options: {
                         easingFunction: "easeInOutCubic",
-                        duration: 1000
+                        duration: 1500
                     }
-                }
+                },
+                isOverlay: true
             });
             newAnimatedGraphic.symbolAnimation.start({
-                type: "symbol-scale",
-                to: 1.7,
+                to: { scale: 1.7 },
                 onFinish: () => {
                     this.symbolAnimationManager.removeAnimatedGraphic(newAnimatedGraphic);
                 }

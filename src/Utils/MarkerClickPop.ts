@@ -157,8 +157,7 @@ export class MarkerClickPopAnimation {
 
     private animatePointPopEffect(animatedGraphic: IAnimatedGraphic) {
         animatedGraphic.symbolAnimation.start({
-            type: "symbol-scale",
-            to: this.scaleFactor,
+            to: { scale: this.scaleFactor, rotate: -10 },
             onStart: () => {
                 const cancelAnimationOnEnd = () => this.cancelAnimation(animatedGraphic);
 
@@ -195,8 +194,7 @@ export class MarkerClickPopAnimation {
 
     private cancelAnimation(animatedGraphic: IAnimatedGraphic) {
         animatedGraphic.symbolAnimation.start({
-            type: "symbol-scale",
-            to: 1,
+            to: { scale: 1, rotate: 0 },
             onFinish: () => {
                 this.symbolAnimationManager.removeAnimatedGraphic(animatedGraphic);
             }

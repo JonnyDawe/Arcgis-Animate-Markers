@@ -10,19 +10,37 @@ export type AnimatableLayerView =
     | __esri.GeoJSONLayerView
     | __esri.GraphicsLayerView;
 
+// change to an array?
 export interface IAnimationProps {
-    type: "symbol-scale";
-    to: number;
+    to?: IAnimatableSymbolProps;
+    onStep?: onSymbolAnimationStep<AnimatableSymbol>;
     onStart?: () => void;
     onFinish?: () => void;
 }
+interface IAnimatableSymbolProps {
+    scale?: number;
+    rotate?: number;
+}
 
-export type onSymbolAnimationStep = (
+export type onSymbolAnimationStep<T extends AnimatableSymbol> = (
     progress: number,
-    originalSymbol: __esri.Symbol,
-    currentSymbol: __esri.Symbol,
-    animationProps: IAnimationProps
-) => __esri.Symbol;
+    fromSymbol: SymbolType<T>,
+    to: IAnimatableSymbolProps
+) => SymbolType<T>;
+
+type AnimatableSymbol =
+    | __esri.SimpleMarkerSymbol
+    | __esri.PictureMarkerSymbol
+    | __esri.CIMSymbol
+    | __esri.Symbol;
+
+type SymbolType<T extends AnimatableSymbol> = T extends __esri.SimpleMarkerSymbol
+    ? __esri.SimpleMarkerSymbol
+    : T extends __esri.PictureMarkerSymbol
+    ? __esri.PictureMarkerSymbol
+    : T extends __esri.CIMSymbol
+    ? __esri.CIMSymbol
+    : __esri.Symbol;
 
 export type AnimationEasingConfig = ISpringEasingConfig | IStandardEasingConfig;
 
@@ -145,14 +163,20 @@ export class SymbolAnimationManager {
         }
     }
 
-    private addExcludedFeature(objectId: number) {
-        this.graphicsObjectIdsToFilter.add(objectId);
-        this.updateExcludedFeatures();
+    private addExcludedFeature(graphic: Graphic) {
+        const objectId = graphic.getObjectId();
+        if (objectId) {
+            this.graphicsObjectIdsToFilter.add(objectId);
+            this.updateExcludedFeatures();
+        }
     }
 
-    private removeExcludedFeature(objectId: number) {
-        this.graphicsObjectIdsToFilter.delete(objectId);
-        this.updateExcludedFeatures();
+    private removeExcludedFeature(graphic: Graphic) {
+        const objectId = graphic.getObjectId();
+        if (objectId) {
+            this.graphicsObjectIdsToFilter.delete(objectId);
+            this.updateExcludedFeatures();
+        }
     }
 
     private updateExcludedFeatures(): void {
@@ -164,13 +188,15 @@ export class SymbolAnimationManager {
     }
 
     public hasAnimatedGraphic(graphic: __esri.Graphic) {
-        const objectId = this.getGraphicId(graphic);
-        return objectId !== undefined && this.animatedGraphics[objectId] !== undefined;
+        const uniqueGraphicId = this.getGraphicId(graphic);
+        return (
+            uniqueGraphicId !== undefined && this.animatedGraphics[uniqueGraphicId] !== undefined
+        );
     }
 
     public getAnimatedGraphic(graphic: __esri.Graphic): IAnimatedGraphic | undefined {
-        const objectId = this.getGraphicId(graphic);
-        return this.animatedGraphics[objectId.toString()];
+        const uniqueGraphicId = this.getGraphicId(graphic);
+        return this.animatedGraphics[uniqueGraphicId.toString()];
     }
 
     public getAllAnimatedGraphics(): IAnimatedGraphic[] {
@@ -186,7 +212,7 @@ export class SymbolAnimationManager {
         easingConfig: AnimationEasingConfig;
         isOverlay?: boolean;
     }): IAnimatedGraphic {
-        const objectId = this.getGraphicId(graphic);
+        const uniqueGraphicId = this.getGraphicId(graphic);
 
         if (this.hasAnimatedGraphic(graphic)) {
             return this.getAnimatedGraphic(graphic) as IAnimatedGraphic;
@@ -198,7 +224,7 @@ export class SymbolAnimationManager {
         });
 
         // add the graphic to the lookup using its object ID
-        this.animatedGraphics[objectId.toString()] = newAnimatedGraphic;
+        this.animatedGraphics[uniqueGraphicId.toString()] = newAnimatedGraphic;
 
         if (isGraphicsLayerView(this.parentLayerView)) {
             // directly manipulate the graphic.
@@ -207,7 +233,7 @@ export class SymbolAnimationManager {
             this.animationGraphicsLayer.add(newAnimatedGraphic);
 
             if (!isOverlay) {
-                this.addExcludedFeature(objectId);
+                this.addExcludedFeature(graphic);
             }
         }
 
@@ -216,21 +242,21 @@ export class SymbolAnimationManager {
 
     public removeAnimatedGraphic(graphic: __esri.Graphic): void {
         // remove the graphic from the lookup using its object ID
-        const objectId = this.getGraphicId(graphic);
+        const uniqueGraphicId = this.getGraphicId(graphic);
         if (this.hasAnimatedGraphic(graphic)) {
             const animatedGraphic = this.getAnimatedGraphic(graphic) as IAnimatedGraphic;
             if (isGraphicsLayerView(this.parentLayerView)) {
                 // reset the graphic symbol.
                 animatedGraphic.symbolAnimation.resetSymbol();
             } else {
-                this.removeExcludedFeature(objectId);
+                this.removeExcludedFeature(graphic);
                 window.setTimeout(() => {
                     // remove graphic from animation layer.
                     this.removeAnimatedGraphic(animatedGraphic);
                     this.animationGraphicsLayer.remove(animatedGraphic);
-                }, 50);
+                }, 100);
             }
-            delete this.animatedGraphics[objectId.toString()];
+            delete this.animatedGraphics[uniqueGraphicId.toString()];
         }
     }
 
@@ -276,102 +302,42 @@ class GraphicSymbolAnimation {
     }
 
     public start(animationProps: IAnimationProps) {
-        switch (animationProps.type) {
-            case "symbol-scale":
-                this.animateMarkerSize(animationProps);
-        }
+        this.animateSymbol(animationProps, animationProps.onStep ?? this.animateMarker);
     }
 
-    private animateMarkerSize(animationProps: IAnimationProps) {
+    private get animateMarker(): onSymbolAnimationStep<__esri.Symbol> {
         switch (this.originalSymbol.type) {
             case "simple-marker": {
-                this.animateSymbol(animationProps, this.updateSimpleMarkerScale);
-                break;
+                return this.updateSimpleMarker;
             }
 
             case "picture-marker": {
-                this.animateSymbol(animationProps, this.updatePictureMarkerScale);
-                break;
+                return this.updatePictureMarker;
             }
 
             case "cim": {
-                this.animateSymbol(animationProps, this.updateCIMSymbolPointMarkerScale);
-                break;
+                return this.updateCIMSymbolPointMarker;
             }
+            default:
+                return (
+                    progress: number,
+                    fromSymbol: __esri.Symbol,
+                    to: IAnimatableSymbolProps
+                ) => {
+                    return this.originalSymbol;
+                };
         }
     }
-
-    private easeOutQuad = (t: number) => t * (2 - t);
-
-    private updateSimpleMarkerScale: onSymbolAnimationStep = (
-        progress: number,
-        originalSymbol: __esri.Symbol,
-        currentSymbol: __esri.Symbol,
-        { to: targetScale }: { to: number }
-    ): __esri.SimpleMarkerSymbol => {
-        const { size: originalSize } = originalSymbol as __esri.SimpleMarkerSymbol;
-        const { size: currentSize } = currentSymbol as __esri.SimpleMarkerSymbol;
-
-        const sym = (currentSymbol as __esri.SimpleMarkerSymbol).clone();
-        sym.size = currentSize + (originalSize * targetScale - currentSize) * progress;
-
-        return sym;
-    };
-
-    private updatePictureMarkerScale: onSymbolAnimationStep = (
-        progress: number,
-        originalSymbol: __esri.Symbol,
-        currentSymbol: __esri.Symbol,
-        { to: targetScale }: { to: number }
-    ): __esri.PictureMarkerSymbol => {
-        const { height: originalHeight, width: originalWidth } =
-            originalSymbol as __esri.PictureMarkerSymbol;
-        const { height: currentHeight, width: currentWidth } =
-            currentSymbol as __esri.PictureMarkerSymbol;
-
-        const sym = (currentSymbol as __esri.PictureMarkerSymbol).clone();
-
-        sym.width = currentWidth + (originalWidth * targetScale - currentWidth) * progress;
-        sym.height = currentHeight + (originalHeight * targetScale - currentHeight) * progress;
-
-        console.log(sym.width);
-        console.log(sym.height);
-        return sym;
-    };
-
-    private updateCIMSymbolPointMarkerScale: onSymbolAnimationStep = (
-        progress: number,
-        originalSymbol: __esri.Symbol,
-        currentSymbol: __esri.Symbol,
-        { to: targetScale }: { to: number }
-    ): __esri.CIMSymbol => {
-        const newSymbol = (currentSymbol as __esri.CIMSymbol).clone();
-
-        for (const [index, symbolLayer] of newSymbol.data.symbol.symbolLayers.entries()) {
-            if (isCIMVectorMarkerLayer(symbolLayer)) {
-                const originalSymbolLayer = (originalSymbol as __esri.CIMSymbol).data.symbol
-                    .symbolLayers[index] as __esri.CIMVectorMarker;
-                symbolLayer.size =
-                    symbolLayer.size +
-                    (originalSymbolLayer.size * targetScale - symbolLayer.size) * progress;
-            }
-            if (isCIMPictureMarkerLayer(symbolLayer)) {
-                const originalSymbolLayer = (originalSymbol as __esri.CIMSymbol).data.symbol
-                    .symbolLayers[index] as __esri.CIMPictureMarker;
-                symbolLayer.size =
-                    symbolLayer.size +
-                    (originalSymbolLayer.size * targetScale - symbolLayer.size) * progress;
-            }
-        }
-        return newSymbol;
-    };
 
     private abortCurrentAnimation: () => void = () => {
         return;
     };
 
-    public animateSymbol(animationProps: IAnimationProps, onStep: onSymbolAnimationStep) {
-        const currentSymbol = (this.graphic.symbol as any).clone();
+    public animateSymbol(
+        animationProps: IAnimationProps,
+        onStep: onSymbolAnimationStep<AnimatableSymbol>
+    ) {
+        const fromSymbol = (this.graphic.symbol as any).clone();
 
         const springEasing =
             this.easingConfig.type === "spring"
@@ -407,7 +373,7 @@ class GraphicSymbolAnimation {
             switch (this.easingConfig.type) {
                 case "easing": {
                     animationProgress = this.calculateEasingProgress(
-                        this.easingConfig.options?.easingFunction ?? "linear",
+                        this.easingConfig.options?.easingFunction,
                         elapsed / (this.easingConfig.options?.duration ?? 0)
                     );
 
@@ -423,12 +389,7 @@ class GraphicSymbolAnimation {
                 }
             }
 
-            this.graphic.symbol = onStep(
-                animationProgress,
-                this.originalSymbol,
-                currentSymbol,
-                animationProps
-            );
+            this.graphic.symbol = onStep(animationProgress, fromSymbol, animationProps.to ?? {});
             window.requestAnimationFrame(step);
         };
 
@@ -438,11 +399,87 @@ class GraphicSymbolAnimation {
         };
     }
 
+    private updateSimpleMarker: onSymbolAnimationStep<__esri.SimpleMarkerSymbol> = (
+        progress: number,
+        fromSymbol: __esri.SimpleMarkerSymbol,
+        to: IAnimatableSymbolProps
+    ): __esri.SimpleMarkerSymbol => {
+        const sym = fromSymbol.clone();
+        const { size: originalSize, angle: originalAngle } = this
+            .originalSymbol as __esri.SimpleMarkerSymbol;
+        const { size: fromSize, angle: fromAngle } = fromSymbol;
+
+        if (to.scale) {
+            sym.size = fromSize + (originalSize * to.scale - fromSize) * progress;
+        }
+
+        if (to.rotate != undefined && !isNaN(to.rotate)) {
+            sym.angle = fromAngle + (originalAngle + to.rotate - fromAngle) * progress;
+        }
+
+        return sym;
+    };
+
+    private updatePictureMarker: onSymbolAnimationStep<__esri.PictureMarkerSymbol> = (
+        progress: number,
+        fromSymbol: __esri.PictureMarkerSymbol,
+        to: IAnimatableSymbolProps
+    ): __esri.PictureMarkerSymbol => {
+        const sym = fromSymbol.clone();
+        const {
+            height: originalHeight,
+            width: originalWidth,
+            angle: originalAngle
+        } = this.originalSymbol as __esri.PictureMarkerSymbol;
+        const { height: fromHeight, width: fromWidth, angle: fromAngle } = fromSymbol;
+
+        if (to.scale) {
+            sym.width = fromWidth + (originalWidth * to.scale - fromWidth) * progress;
+            sym.height = fromHeight + (originalHeight * to.scale - fromHeight) * progress;
+        }
+
+        if (to.rotate != undefined && !isNaN(to.rotate)) {
+            sym.angle = fromAngle + (originalAngle + to.rotate - fromAngle) * progress;
+            console.log(sym.angle);
+        }
+
+        return sym;
+    };
+    private updateCIMSymbolPointMarker: onSymbolAnimationStep<__esri.CIMSymbol> = (
+        progress: number,
+        fromSymbol: __esri.CIMSymbol,
+        to: IAnimatableSymbolProps
+    ): __esri.CIMSymbol => {
+        const newSymbol = fromSymbol.clone();
+
+        for (const [index, symbolLayer] of newSymbol.data.symbol.symbolLayers.entries()) {
+            if (isCIMVectorMarkerLayer(symbolLayer) || isCIMPictureMarkerLayer(symbolLayer)) {
+                const originalSymbolLayer = (this.originalSymbol as __esri.CIMSymbol).data.symbol
+                    .symbolLayers[index] as __esri.CIMVectorMarker;
+
+                if (to.scale) {
+                    symbolLayer.size =
+                        symbolLayer.size +
+                        (originalSymbolLayer.size * to.scale - symbolLayer.size) * progress;
+                }
+                if (to.rotate != undefined && !isNaN(to.rotate)) {
+                    const { rotation: fromAngle = 0 } = symbolLayer;
+                    symbolLayer.rotation =
+                        fromAngle +
+                        ((originalSymbolLayer.rotation ?? 0) + -to.rotate - fromAngle) * progress;
+                    console.log(symbolLayer.rotation);
+                }
+            }
+        }
+
+        return newSymbol;
+    };
+
     public resetSymbol() {
         this.graphic.symbol = this.originalSymbol;
     }
 
-    private calculateEasingProgress(easing: easingTypes | EasingFunction, t: number) {
+    private calculateEasingProgress(easing: easingTypes | EasingFunction = "linear", t: number) {
         if (typeof easing === "function") {
             return easing(t);
         } else {
