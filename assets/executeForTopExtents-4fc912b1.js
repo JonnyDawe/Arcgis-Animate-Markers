@@ -1,1 +1,0 @@
-import{b_ as r,lG as m,p}from"./vendor-e7703df7.js";import{p as s}from"./queryTopFeatures-66045df2.js";async function u(o,a,e){const n=r(o),t=await s(n,m.from(a),{...e});return{count:t.data.count,extent:p.fromJSON(t.data.extent)}}export{u as executeForTopExtents};
