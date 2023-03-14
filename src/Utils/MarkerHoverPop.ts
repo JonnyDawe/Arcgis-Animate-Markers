@@ -82,7 +82,10 @@ export class MarkerHoverPopAnimation {
     private _activeGraphic: __esri.Graphic | null = null;
     // need to add a list of animating points...
     public set activeGraphic(hitGraphic: __esri.Graphic | null) {
-        if (hitGraphic !== null && this.symbolAnimationManager.hasAnimatedGraphic(hitGraphic)) {
+        if (
+            hitGraphic !== null &&
+            this.symbolAnimationManager.hasAnimatedGraphic({ graphic: hitGraphic })
+        ) {
             return;
         }
 

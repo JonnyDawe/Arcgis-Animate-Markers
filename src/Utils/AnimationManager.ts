@@ -10,14 +10,13 @@ export type AnimatableLayerView =
     | __esri.GeoJSONLayerView
     | __esri.GraphicsLayerView;
 
-// change to an array?
 export interface IAnimationProps {
     to?: IAnimatableSymbolProps;
     onStep?: onSymbolAnimationStep<AnimatableSymbol>;
     onStart?: () => void;
     onFinish?: () => void;
 }
-interface IAnimatableSymbolProps {
+export interface IAnimatableSymbolProps {
     scale?: number;
     rotate?: number;
 }
@@ -49,6 +48,14 @@ export interface ISpringEasingConfig {
     options?: AnimationProps["config"];
 }
 
+export interface IStandardEasingConfig {
+    type: "easing";
+    options?: {
+        easingFunction: easingTypes | EasingFunction;
+        duration: number;
+    };
+}
+
 type easingTypes =
     | "linear"
     | "easeInCubic"
@@ -58,20 +65,13 @@ type easingTypes =
     | "easeOutExpo"
     | "easeInOutExpo"
     | "easeInOutQuad";
-export interface IStandardEasingConfig {
-    type: "easing";
-    options?: {
-        easingFunction: easingTypes | EasingFunction;
-        duration: number;
-    };
+
+export interface IAnimatedGraphic extends Graphic {
+    symbolAnimation: GraphicSymbolAnimation;
 }
 
 interface IGraphicWithUID extends Graphic {
     uid: number;
-}
-
-export interface IAnimatedGraphic extends Graphic {
-    symbolAnimation: GraphicSymbolAnimation;
 }
 
 const isGraphicsLayerView = (
@@ -187,16 +187,34 @@ export class SymbolAnimationManager {
         });
     }
 
-    public hasAnimatedGraphic(graphic: __esri.Graphic) {
-        const uniqueGraphicId = this.getGraphicId(graphic);
-        return (
-            uniqueGraphicId !== undefined && this.animatedGraphics[uniqueGraphicId] !== undefined
-        );
+    public hasAnimatedGraphic({
+        graphic,
+        animationId
+    }: {
+        graphic?: __esri.Graphic;
+        animationId?: string;
+    }) {
+        if (animationId) {
+            return this.animatedGraphics[animationId] !== undefined;
+        }
+        if (graphic) {
+            return this.animatedGraphics[this.getGraphicId(graphic)] !== undefined;
+        }
     }
 
-    public getAnimatedGraphic(graphic: __esri.Graphic): IAnimatedGraphic | undefined {
-        const uniqueGraphicId = this.getGraphicId(graphic);
-        return this.animatedGraphics[uniqueGraphicId.toString()];
+    public getAnimatedGraphic({
+        graphic,
+        animationId
+    }: {
+        graphic?: __esri.Graphic;
+        animationId?: string;
+    }): IAnimatedGraphic | undefined {
+        if (animationId) {
+            return this.animatedGraphics[animationId];
+        }
+        if (graphic) {
+            return this.animatedGraphics[this.getGraphicId(graphic)];
+        }
     }
 
     public getAllAnimatedGraphics(): IAnimatedGraphic[] {
@@ -206,30 +224,36 @@ export class SymbolAnimationManager {
     public makeAnimatableSymbol({
         graphic,
         easingConfig,
-        isOverlay = false
+        isOverlay = false,
+        animationId
     }: {
         graphic: __esri.Graphic;
         easingConfig: AnimationEasingConfig;
         isOverlay?: boolean;
+        animationId?: string;
     }): IAnimatedGraphic {
-        const uniqueGraphicId = this.getGraphicId(graphic);
+        const uniqueGraphicId = animationId ?? this.getGraphicId(graphic);
 
-        if (this.hasAnimatedGraphic(graphic)) {
-            return this.getAnimatedGraphic(graphic) as IAnimatedGraphic;
+        if (this.hasAnimatedGraphic({ graphic, animationId })) {
+            return this.getAnimatedGraphic({
+                animationId,
+                graphic
+            }) as IAnimatedGraphic;
         }
 
         const newAnimatedGraphic = GraphicSymbolAnimation.createAnimatedGraphic({
             graphic,
-            easingConfig
+            easingConfig,
+            id: uniqueGraphicId
         });
 
-        // add the graphic to the lookup using its object ID
-        this.animatedGraphics[uniqueGraphicId.toString()] = newAnimatedGraphic;
+        // add the graphic to the lookup
+        this.animatedGraphics[uniqueGraphicId] = newAnimatedGraphic;
 
         if (isGraphicsLayerView(this.parentLayerView)) {
             // directly manipulate the graphic.
         } else {
-            // make a new animated graphic and add it to a new grapics layer.
+            // make a new animated graphic and add it to a new graphics layer.
             this.animationGraphicsLayer.add(newAnimatedGraphic);
 
             if (!isOverlay) {
@@ -240,11 +264,13 @@ export class SymbolAnimationManager {
         return newAnimatedGraphic;
     }
 
-    public removeAnimatedGraphic(graphic: __esri.Graphic): void {
-        // remove the graphic from the lookup using its object ID
-        const uniqueGraphicId = this.getGraphicId(graphic);
-        if (this.hasAnimatedGraphic(graphic)) {
-            const animatedGraphic = this.getAnimatedGraphic(graphic) as IAnimatedGraphic;
+    public removeAnimatedGraphic(graphic: __esri.Graphic, animationId?: string): void {
+        const uniqueGraphicId = animationId ?? this.getGraphicId(graphic);
+        if (this.hasAnimatedGraphic({ graphic, animationId })) {
+            const animatedGraphic = this.getAnimatedGraphic({
+                animationId,
+                graphic
+            }) as IAnimatedGraphic;
             if (isGraphicsLayerView(this.parentLayerView)) {
                 // reset the graphic symbol.
                 animatedGraphic.symbolAnimation.resetSymbol();
@@ -256,44 +282,55 @@ export class SymbolAnimationManager {
                     this.animationGraphicsLayer.remove(animatedGraphic);
                 }, 100);
             }
-            delete this.animatedGraphics[uniqueGraphicId.toString()];
+            delete this.animatedGraphics[uniqueGraphicId];
         }
     }
 
-    private getGraphicId(graphic: __esri.Graphic) {
-        return graphic.getObjectId() ?? `${(graphic as IGraphicWithUID).uid}-uid`;
+    private getGraphicId(graphic: __esri.Graphic): string {
+        return (
+            (graphic as IAnimatedGraphic)?.symbolAnimation?.id ??
+            graphic.getObjectId().toString() ??
+            `${(graphic as IGraphicWithUID).uid}-uid`
+        );
     }
 }
 
 class GraphicSymbolAnimation {
     public static createAnimatedGraphic({
         graphic,
-        easingConfig
+        easingConfig,
+        id
     }: {
         graphic: __esri.Graphic;
         easingConfig: AnimationEasingConfig;
+        id: string;
     }): IAnimatedGraphic {
         (graphic as IAnimatedGraphic).symbolAnimation = new GraphicSymbolAnimation({
             graphic,
-            easingConfig
+            easingConfig,
+            id
         });
         return graphic as IAnimatedGraphic;
     }
 
+    public id: string;
     private easingConfig: AnimationEasingConfig;
     private graphic: Graphic;
     private originalSymbol: __esri.Symbol;
 
     constructor({
         graphic,
-        easingConfig
+        easingConfig,
+        id
     }: {
         graphic: __esri.Graphic;
         easingConfig: AnimationEasingConfig;
+        id: string;
     }) {
         this.graphic = graphic;
         this.originalSymbol = (graphic.symbol as any).clone();
         this.easingConfig = easingConfig;
+        this.id = id;
     }
 
     private animationStartTimeStamp = 0;
