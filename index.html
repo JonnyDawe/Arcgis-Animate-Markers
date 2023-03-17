@@ -5,12 +5,21 @@
         <link rel="icon" type="image/svg+xml" href="src/assets/favicon.svg" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>ArcGIS Musical Animated Map</title>
-      <script type="module" crossorigin src="/Arcgis-Animate-Markers/assets/index-3f622297.js"></script>
-      <link rel="modulepreload" crossorigin href="/Arcgis-Animate-Markers/assets/vendor-8b656dfb.js">
+      <script type="module" crossorigin src="/Arcgis-Animate-Markers/assets/index-d6ab77bb.js"></script>
+      <link rel="modulepreload" crossorigin href="/Arcgis-Animate-Markers/assets/vendor-4e4308ee.js">
       <link rel="stylesheet" href="/Arcgis-Animate-Markers/assets/index-d709ff7b.css">
     </head>
     <body>
-        <div id="viewDiv"><div id="titleDiv" class="esri-widget">Press on the bombs!</div></div>
+        <div id="viewDiv">
+            <div id="titleDiv" class="esri-widget">
+                <select id="modeSelect">
+                    <option value="radar-ping">radar pings</option>
+                    <option value="hover-pop-effect">hover boop!</option>
+                    <option value="click-pop-effect" selected>musical click animation</option>
+                    <option value="custom-animation">custom animation</option>
+                </select>
+            </div>
+        </div>
         
     </body>
 </html>
