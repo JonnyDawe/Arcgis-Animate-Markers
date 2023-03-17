@@ -1,6 +1,12 @@
 import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
 import * as symbolUtils from "@arcgis/core/symbols/support/symbolUtils";
-import { config as springConfig } from "@react-spring/web";
+import FeatureLayerView from "@arcgis/core/views/layers/FeatureLayerView";
+import {
+    AnimationEasingConfig,
+    IAnimatableSymbolProps,
+    IAnimatedGraphic,
+    SymbolAnimationManager
+} from "arcgis-animate-markers-plugin";
 import { Howl } from "howler";
 
 import bugle from "../assets/bugle.wav";
@@ -8,71 +14,62 @@ import meow from "../assets/cat.wav";
 import drums from "../assets/drums.mp3";
 import guitar from "../assets/guitar.wav";
 import trumpet from "../assets/trumpet.wav";
-import {
-    AnimatableLayerView,
-    AnimationEasingConfig,
-    IAnimatedGraphic,
-    SymbolAnimationManager
-} from "./AnimationManager";
 import { throttleAsync } from "./throttle";
 
+/** Example - Animate the symbol of a graphic when a user clicks on the point.
+ *
+ * This example uses Spring easing and demonstrates adding sounds to an animation.
+ */
 export class MarkerClickPopAnimation {
     private mapView: __esri.MapView;
-    private layerView: AnimatableLayerView;
-    private scaleFactor: number;
+    private layerView: FeatureLayerView;
+    private to: IAnimatableSymbolProps;
     private easingConfig: AnimationEasingConfig;
     private symbolAnimationManager: SymbolAnimationManager;
 
     private clickHandler: IHandle;
     private hoverHandler: IHandle;
 
-    private meowSound: Howl = new Howl({
-        src: meow
-    });
-    private trumpetSound: Howl = new Howl({
-        src: trumpet
-    });
-
-    private hornSound: Howl = new Howl({
-        src: bugle
-    });
-
-    private guitarSound: Howl = new Howl({
-        src: guitar
-    });
-    private drumSounds: Howl = new Howl({
-        src: drums,
-        sprite: {
-            kick: [0, 350],
-            hihat: [374, 160],
-            snare: [666, 290],
-            cowbell: [968, 200]
-        }
-    });
+    private sounds = {
+        meowSound: new Howl({
+            src: meow
+        }),
+        trumpetSound: new Howl({
+            src: trumpet
+        }),
+        hornSound: new Howl({
+            src: bugle
+        }),
+        guitarSound: new Howl({
+            src: guitar
+        }),
+        drumSounds: new Howl({
+            src: drums,
+            sprite: {
+                kick: [0, 350],
+                hihat: [374, 160],
+                snare: [666, 290],
+                cowbell: [968, 200]
+            }
+        })
+    };
 
     constructor({
         symbolAnimationManager,
         mapView,
         layerView,
-        scaleFactor,
-        easingConfig = {
-            type: "spring",
-            options: {
-                tension: 280,
-                friction: 40,
-                mass: 10
-            }
-        }
+        to,
+        easingConfig
     }: {
         symbolAnimationManager: SymbolAnimationManager;
         mapView: __esri.MapView;
-        layerView: AnimatableLayerView;
-        scaleFactor: number;
-        easingConfig?: AnimationEasingConfig;
+        layerView: FeatureLayerView;
+        to: IAnimatableSymbolProps;
+        easingConfig: AnimationEasingConfig;
     }) {
         this.mapView = mapView;
         this.layerView = layerView;
-        this.scaleFactor = scaleFactor;
+        this.to = to;
         this.easingConfig = easingConfig;
         this.symbolAnimationManager = symbolAnimationManager;
 
@@ -102,8 +99,12 @@ export class MarkerClickPopAnimation {
     }
 
     /**
-     * performs a hit test on the mapView object. The function is decorated with the throttle
-     * function which limits the rate at which the function can be executed.
+     * Change the cursor to a pointer.
+     *
+     * Performs a hit test on the mapView object as the user moves their mouse.
+     * The function is decorated with the throttle helper function which limits
+     * the rate at which the function can be executed.
+     *
      */
     private hoverHitTest = throttleAsync(
         async (
@@ -124,6 +125,9 @@ export class MarkerClickPopAnimation {
         70
     );
 
+    /**
+     * Listen for clicks on the feature layer graphics.
+     */
     private clickHitTest = async (
         event: __esri.MapViewScreenPoint | MouseEvent,
         options: { include: __esri.HitTestItem[] }
@@ -138,54 +142,49 @@ export class MarkerClickPopAnimation {
 
             // The hit test result does not include a symbol so quickly regenerate it here.
             firstLayerGraphic.symbol = await symbolUtils.getDisplayedSymbol(firstLayerGraphic);
-            this.activeGraphic = firstLayerGraphic;
-        } else {
-            this.activeGraphic = null;
-        }
-    };
 
-    // need to add a list of animating points...
-    public set activeGraphic(hitGraphic: __esri.Graphic | null) {
-        if (hitGraphic) {
             const newAnimatedGraphic = this.symbolAnimationManager.makeAnimatableSymbol({
-                graphic: hitGraphic,
+                graphic: firstLayerGraphic,
                 easingConfig: this.easingConfig
             });
             this.animatePointPopEffect(newAnimatedGraphic);
         }
-    }
+    };
 
     private animatePointPopEffect(animatedGraphic: IAnimatedGraphic) {
         animatedGraphic.symbolAnimation.start({
-            to: { scale: this.scaleFactor, rotate: -10 },
+            to: this.to,
             onStart: () => {
                 const cancelAnimationOnEnd = () => this.cancelAnimation(animatedGraphic);
 
                 switch (animatedGraphic.attributes["soundType"]) {
                     case "cat": {
-                        this.playSound(this.meowSound, cancelAnimationOnEnd);
+                        this.playSound(this.sounds.meowSound, cancelAnimationOnEnd);
                         break;
                     }
                     case "trumpet": {
-                        this.playSound(this.trumpetSound, cancelAnimationOnEnd);
+                        this.playSound(this.sounds.trumpetSound, cancelAnimationOnEnd);
                         break;
                     }
                     case "horn": {
-                        this.playSound(this.hornSound, cancelAnimationOnEnd);
+                        this.playSound(this.sounds.hornSound, cancelAnimationOnEnd);
                         break;
                     }
                     case "guitar": {
-                        this.playSound(this.guitarSound, cancelAnimationOnEnd);
+                        this.playSound(this.sounds.guitarSound, cancelAnimationOnEnd);
                         break;
                     }
                     case "drum": {
                         if (Math.random() > 0.5) {
-                            this.playSound(this.drumSounds, cancelAnimationOnEnd, "snare");
+                            this.playSound(this.sounds.drumSounds, cancelAnimationOnEnd, "snare");
                         } else {
-                            this.playSound(this.drumSounds, cancelAnimationOnEnd, "hihat");
+                            this.playSound(this.sounds.drumSounds, cancelAnimationOnEnd, "hihat");
                         }
 
                         break;
+                    }
+                    default: {
+                        cancelAnimationOnEnd();
                     }
                 }
             }
@@ -196,7 +195,7 @@ export class MarkerClickPopAnimation {
         animatedGraphic.symbolAnimation.start({
             to: { scale: 1, rotate: 0 },
             onFinish: () => {
-                this.symbolAnimationManager.removeAnimatedGraphic(animatedGraphic);
+                this.symbolAnimationManager.removeAnimatedGraphic({ graphic: animatedGraphic });
             }
         });
     }

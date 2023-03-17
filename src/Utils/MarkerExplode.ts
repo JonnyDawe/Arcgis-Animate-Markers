@@ -1,22 +1,25 @@
 import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
 import CIMSymbol from "@arcgis/core/symbols/CIMSymbol";
 import * as symbolUtils from "@arcgis/core/symbols/support/symbolUtils";
-import confetti from "canvas-confetti";
-
-import bomb from "../assets/bomb_1f4a3.png";
-import explode from "../assets/explode_1f4a5.png";
+import FeatureLayerView from "@arcgis/core/views/layers/FeatureLayerView";
 import {
-    AnimatableLayerView,
     AnimationEasingConfig,
     IAnimatedGraphic,
     onSymbolAnimationStep,
     SymbolAnimationManager
-} from "./AnimationManager";
+} from "arcgis-animate-markers-plugin";
+import confetti from "canvas-confetti";
+
+import bomb from "../assets/bomb_1f4a3.png";
+import explode from "../assets/explode_1f4a5.png";
 import { throttleAsync } from "./throttle";
 
+/** Example - Custom Animation using CIM Symbols to generate a timer and
+ *  explosion effect on a clicked point.
+ */
 export class MarkerExplosionAnimation {
     private mapView: __esri.MapView;
-    private layerView: AnimatableLayerView;
+    private layerView: FeatureLayerView;
 
     private easingConfig: AnimationEasingConfig;
     private symbolAnimationManager: SymbolAnimationManager;
@@ -24,7 +27,7 @@ export class MarkerExplosionAnimation {
     private clickHandler: IHandle;
     private hoverHandler: IHandle;
 
-    private confetti;
+    private confetti: confetti.CreateTypes;
 
     constructor({
         symbolAnimationManager,
@@ -41,7 +44,7 @@ export class MarkerExplosionAnimation {
     }: {
         symbolAnimationManager: SymbolAnimationManager;
         mapView: __esri.MapView;
-        layerView: AnimatableLayerView;
+        layerView: FeatureLayerView;
 
         easingConfig?: AnimationEasingConfig;
     }) {
@@ -85,8 +88,12 @@ export class MarkerExplosionAnimation {
     }
 
     /**
-     * performs a hit test on the mapView object. The function is decorated with the throttle
-     * function which limits the rate at which the function can be executed.
+     * Change the cursor to a pointer.
+     *
+     * Performs a hit test on the mapView object as the user moves their mouse.
+     * The function is decorated with the throttle helper function which limits
+     * the rate at which the function can be executed.
+     *
      */
     private hoverHitTest = throttleAsync(
         async (
@@ -107,6 +114,9 @@ export class MarkerExplosionAnimation {
         70
     );
 
+    /**
+     * Listen for clicks on the feature layer graphics.
+     */
     private clickHitTest = async (
         event: __esri.MapViewScreenPoint | MouseEvent,
         options: { include: __esri.HitTestItem[] }
@@ -121,22 +131,14 @@ export class MarkerExplosionAnimation {
 
             // The hit test result does not include a symbol so quickly regenerate it here.
             firstLayerGraphic.symbol = await symbolUtils.getDisplayedSymbol(firstLayerGraphic);
-            this.activeGraphic = firstLayerGraphic;
-        } else {
-            this.activeGraphic = null;
-        }
-    };
 
-    // need to add a list of animating points...
-    public set activeGraphic(hitGraphic: __esri.Graphic | null) {
-        if (hitGraphic) {
             const newAnimatedGraphic = this.symbolAnimationManager.makeAnimatableSymbol({
-                graphic: hitGraphic,
+                graphic: firstLayerGraphic,
                 easingConfig: this.easingConfig
             });
             this.animatePointPopEffect(newAnimatedGraphic);
         }
-    }
+    };
 
     private animatePointPopEffect(animatedGraphic: IAnimatedGraphic) {
         animatedGraphic.symbolAnimation.start({

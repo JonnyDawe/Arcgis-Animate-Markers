@@ -1,11 +1,15 @@
 import Graphic from "@arcgis/core/Graphic";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol.js";
+import { SymbolAnimationManager } from "arcgis-animate-markers-plugin";
 
-import { SymbolAnimationManager } from "./AnimationManager";
-
+/** Example - A simple radar ping animation appearing as an overlay for the
+ *  the map point.
+ *
+ * This utilises a standard easing function and adds a new graphic as an overlay
+ * onto the map.
+ */
 export class MarkerRadarPingAnimation {
     private symbolAnimationManager: SymbolAnimationManager;
-
     private intervalId: number;
 
     constructor({
@@ -29,12 +33,15 @@ export class MarkerRadarPingAnimation {
                 color: [255, 255, 255, 0],
                 size: 30,
                 outline: {
-                    color: [255, 0, 0, 0.5],
+                    color: [255, 0, 0, 0.8],
                     style: "solid",
                     width: 4
                 }
             });
+
+            const id = Date.now().toString();
             const newAnimatedGraphic = this.symbolAnimationManager.makeAnimatableSymbol({
+                animationId: id,
                 graphic: graphicToAdd,
                 easingConfig: {
                     type: "easing",
@@ -48,10 +55,12 @@ export class MarkerRadarPingAnimation {
             newAnimatedGraphic.symbolAnimation.start({
                 to: { scale: 1.7 },
                 onFinish: () => {
-                    this.symbolAnimationManager.removeAnimatedGraphic(newAnimatedGraphic);
+                    this.symbolAnimationManager.removeAnimatedGraphic({
+                        graphic: newAnimatedGraphic
+                    });
                 }
             });
-        }, 3000);
+        }, 2000);
     }
 
     destroy() {

@@ -1,39 +1,47 @@
 import * as reactiveUtils from "@arcgis/core/core/reactiveUtils";
 import * as symbolUtils from "@arcgis/core/symbols/support/symbolUtils";
-import { config as springConfig } from "@react-spring/web";
-
 import {
     AnimatableLayerView,
     AnimationEasingConfig,
+    IAnimatableSymbolProps,
     IAnimatedGraphic,
     SymbolAnimationManager
-} from "./AnimationManager";
+} from "arcgis-animate-markers-plugin";
+
 import { throttleAsync } from "./throttle";
 
+/** Example - create a pop-up animation effect on a map when a marker is
+ * hovered over.
+ *
+ * This example uses Spring easing and demonstrates cancelling an animation
+ * everytime a new point is hovered.
+ *
+ */
 export class MarkerHoverPopAnimation {
     private mapView: __esri.MapView;
     private layerView: AnimatableLayerView;
-    private scaleFactor: number;
+    private to: IAnimatableSymbolProps;
     private easingConfig: AnimationEasingConfig;
     private symbolAnimationManager: SymbolAnimationManager;
+
     private hoverHandler: IHandle;
 
     constructor({
         symbolAnimationManager,
         mapView,
         layerView,
-        scaleFactor,
-        easingConfig = { type: "spring", options: springConfig.molasses }
+        to,
+        easingConfig
     }: {
         symbolAnimationManager: SymbolAnimationManager;
         mapView: __esri.MapView;
         layerView: AnimatableLayerView;
-        scaleFactor: number;
+        to: IAnimatableSymbolProps;
         easingConfig: AnimationEasingConfig;
     }) {
         this.mapView = mapView;
         this.layerView = layerView;
-        this.scaleFactor = scaleFactor;
+        this.to = to;
         this.easingConfig = easingConfig;
         this.symbolAnimationManager = symbolAnimationManager;
 
@@ -80,25 +88,22 @@ export class MarkerHoverPopAnimation {
     );
 
     private _activeGraphic: __esri.Graphic | null = null;
-    // need to add a list of animating points...
     public set activeGraphic(hitGraphic: __esri.Graphic | null) {
-        if (
-            hitGraphic !== null &&
-            this.symbolAnimationManager.hasAnimatedGraphic({ graphic: hitGraphic })
-        ) {
+        if (hitGraphic && this.symbolAnimationManager.hasAnimatedGraphic({ graphic: hitGraphic })) {
             return;
         }
 
-        if (hitGraphic === null && this._activeGraphic === null) {
-            return;
+        if (this._activeGraphic === null) {
+            if (hitGraphic === null) {
+                return;
+            }
         } else {
-            this._activeGraphic = hitGraphic;
+            const currentAnimatedSymbol = this.symbolAnimationManager.getAnimatedGraphic({
+                graphic: this._activeGraphic
+            });
+            currentAnimatedSymbol && this.cancelAnimation(currentAnimatedSymbol);
         }
-
-        this.symbolAnimationManager
-            .getAllAnimatedGraphics()
-            .forEach((animatedGraphic) => this.cancelAnimation(animatedGraphic));
-
+        this._activeGraphic = hitGraphic;
         if (this._activeGraphic === null) {
             return;
         }
@@ -112,7 +117,7 @@ export class MarkerHoverPopAnimation {
 
     private animatePointPopEffect(animatedGraphic: IAnimatedGraphic) {
         animatedGraphic.symbolAnimation.start({
-            to: { scale: this.scaleFactor, rotate: 10 }
+            to: this.to
         });
     }
 
@@ -120,7 +125,7 @@ export class MarkerHoverPopAnimation {
         animatedGraphic.symbolAnimation.start({
             to: { scale: 1, rotate: 0 },
             onFinish: () => {
-                this.symbolAnimationManager.removeAnimatedGraphic(animatedGraphic);
+                this.symbolAnimationManager.removeAnimatedGraphic({ graphic: animatedGraphic });
             }
         });
     }

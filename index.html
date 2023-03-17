@@ -7,7 +7,16 @@
         <title>ArcGIS Musical Animated Map</title>
     </head>
     <body>
-        <div id="viewDiv"><div id="titleDiv" class="esri-widget">Press on the bombs!</div></div>
+        <div id="viewDiv">
+            <div id="titleDiv" class="esri-widget">
+                <select id="modeSelect">
+                    <option value="radar-ping">radar pings</option>
+                    <option value="hover-pop-effect">hover boop!</option>
+                    <option value="click-pop-effect" selected>musical click animation</option>
+                    <option value="custom-animation">custom animation</option>
+                </select>
+            </div>
+        </div>
         <script type="module" src="/src/main.tsx"></script>
     </body>
 </html>
