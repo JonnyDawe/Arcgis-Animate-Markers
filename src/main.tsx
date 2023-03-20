@@ -52,12 +52,13 @@ let currentMode:
 let symbolAnimationManager: SymbolAnimationManager;
 let featureLayerView: FeatureLayerView;
 let originalRenderer: __esri.Renderer;
-const allGraphics = await featureLayer.queryFeatures({
-    where: "1=1",
-    returnGeometry: true
-});
+let allGraphics: __esri.FeatureSet;
 
 mapView.whenLayerView(featureLayer).then(async (layerView) => {
+    allGraphics = await featureLayer.queryFeatures({
+        where: "1=1",
+        returnGeometry: true
+    });
     featureLayerView = layerView;
     symbolAnimationManager = new SymbolAnimationManager({
         mapView,
@@ -87,6 +88,7 @@ function updateAnimationExample(event: InputEvent) {
         const mode = select.options[select.selectedIndex].value;
 
         currentMode.destroy();
+        symbolAnimationManager.removeAllAnimatedGraphics();
         switch (mode) {
             case "radar-ping": {
                 currentMode = new MarkerRadarPingAnimation({
