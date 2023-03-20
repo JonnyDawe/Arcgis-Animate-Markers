@@ -66,19 +66,13 @@ mapView.whenLayerView(featureLayer).then(async (layerView) => {
     });
     originalRenderer = (featureLayer.renderer as SimpleRenderer).clone();
 
-    currentMode = new MarkerClickPopAnimation({
+    featureLayer.renderer = new SimpleRenderer({
+        symbol: generateExplosionTimerSymbol(0)
+    });
+    currentMode = new MarkerExplosionAnimation({
         symbolAnimationManager,
         mapView,
-        layerView: featureLayerView,
-        to: { scale: 1.5, rotate: 20 },
-        easingConfig: {
-            type: "spring",
-            options: {
-                tension: 280,
-                friction: 40,
-                mass: 10
-            }
-        }
+        layerView: featureLayerView
     });
 });
 
