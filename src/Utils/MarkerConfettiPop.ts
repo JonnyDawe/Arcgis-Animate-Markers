@@ -10,8 +10,8 @@ import {
 } from "arcgis-animate-markers-plugin";
 import confetti from "canvas-confetti";
 
-import bomb from "../assets/bomb_1f4a3.png";
-import explode from "../assets/explode_1f4a5.png";
+import straightFace from "../assets/expressionless-face_1f611.png";
+import partyFace from "../assets/partying-face_1f973.png";
 import { throttleAsync } from "./throttle";
 
 /** Example - Custom Animation using CIM Symbols to generate a timer and
@@ -156,28 +156,7 @@ export class MarkerExplosionAnimation {
                         y: screenPoint.y / this.mapView.height
                     }
                 });
-                animatedGraphic.symbol = new CIMSymbol({
-                    data: {
-                        type: "CIMSymbolReference",
-                        symbol: {
-                            type: "CIMPointSymbol",
-                            symbolLayers: [
-                                {
-                                    type: "CIMPictureMarker",
-                                    enable: true,
-                                    anchorPoint: {
-                                        x: 0,
-                                        y: 0
-                                    },
-                                    size: 40,
-                                    scaleX: 1,
-                                    tintColor: [255, 255, 255, 255],
-                                    url: explode
-                                }
-                            ]
-                        }
-                    }
-                });
+                animatedGraphic.symbol = generatePartyPopSymbol(1);
             }
         });
     }
@@ -187,7 +166,7 @@ export class MarkerExplosionAnimation {
         fromSymbol: __esri.CIMSymbol,
         to
     ): __esri.CIMSymbol => {
-        return generateExplosionTimerSymbol(progress);
+        return generatePartyPopSymbol(progress);
     };
 
     destroy() {
@@ -200,8 +179,7 @@ function generateProgressVectorMarker(progress: number): __esri.CIMVectorMarker[
     return [
         {
             type: "CIMVectorMarker",
-            enable: true,
-
+            enable: progress > 0 && progress < 1,
             offsetX: 17.5 * (progress - 1),
             size: 35,
             anchorPoint: {
@@ -241,7 +219,7 @@ function generateProgressVectorMarker(progress: number): __esri.CIMVectorMarker[
         },
         {
             type: "CIMVectorMarker",
-            enable: true,
+            enable: progress > 0 && progress < 1,
             offsetX: 17.5 * progress,
             size: 35,
             anchorPoint: {
@@ -281,14 +259,14 @@ function generateProgressVectorMarker(progress: number): __esri.CIMVectorMarker[
         }
     ];
 }
-export function generateExplosionTimerSymbol(progress: number): __esri.CIMSymbol {
+export function generatePartyPopSymbol(progress: number): __esri.CIMSymbol {
     return new CIMSymbol({
         data: {
             type: "CIMSymbolReference",
             symbol: {
                 type: "CIMPointSymbol",
                 symbolLayers: [
-                    ...(progress > 0 ? generateProgressVectorMarker(progress) : []),
+                    ...generateProgressVectorMarker(progress),
                     {
                         type: "CIMPictureMarker",
                         enable: true,
@@ -296,12 +274,12 @@ export function generateExplosionTimerSymbol(progress: number): __esri.CIMSymbol
                             x: 0,
                             y: 0
                         },
-                        offsetX: 3,
+                        offsetX: 0,
                         offsetY: 3,
                         size: 40,
                         scaleX: 1,
                         tintColor: [255, 255, 255, 255],
-                        url: bomb
+                        url: progress < 1 ? straightFace : partyFace
                     }
                 ]
             }

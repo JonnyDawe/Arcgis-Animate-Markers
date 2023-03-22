@@ -10,7 +10,7 @@ import { config as springConfig } from "@react-spring/web";
 import { SymbolAnimationManager } from "arcgis-animate-markers-plugin";
 
 import { MarkerClickPopAnimation } from "./Utils/MarkerClickPop";
-import { generateExplosionTimerSymbol, MarkerExplosionAnimation } from "./Utils/MarkerExplode";
+import { generatePartyPopSymbol, MarkerExplosionAnimation } from "./Utils/MarkerConfettiPop";
 import { MarkerHoverPopAnimation } from "./Utils/MarkerHoverPop";
 import { MarkerRadarPingAnimation } from "./Utils/MarkerRadarPing";
 
@@ -67,7 +67,7 @@ mapView.whenLayerView(featureLayer).then(async (layerView) => {
     originalRenderer = (featureLayer.renderer as SimpleRenderer).clone();
 
     featureLayer.renderer = new SimpleRenderer({
-        symbol: generateExplosionTimerSymbol(0)
+        symbol: generatePartyPopSymbol(0)
     });
     currentMode = new MarkerExplosionAnimation({
         symbolAnimationManager,
@@ -92,7 +92,9 @@ function updateAnimationExample(event: InputEvent) {
                 break;
             }
             case "hover-pop-effect": {
-                featureLayer.renderer = originalRenderer;
+                featureLayer.renderer = new SimpleRenderer({
+                    symbol: generatePartyPopSymbol(0)
+                });
                 currentMode = new MarkerHoverPopAnimation({
                     symbolAnimationManager,
                     mapView,
@@ -122,7 +124,7 @@ function updateAnimationExample(event: InputEvent) {
             }
             case "custom-animation": {
                 featureLayer.renderer = new SimpleRenderer({
-                    symbol: generateExplosionTimerSymbol(0)
+                    symbol: generatePartyPopSymbol(0)
                 });
                 currentMode = new MarkerExplosionAnimation({
                     symbolAnimationManager,
