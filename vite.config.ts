@@ -7,6 +7,9 @@ export default defineConfig({
     server: {
         fs: { strict: false }
     },
+    resolve: {
+        dedupe: ["@arcgis/core"]
+    },
     build: {
         chunkSizeWarningLimit: 1500
     },

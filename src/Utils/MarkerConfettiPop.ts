@@ -181,6 +181,7 @@ function generateProgressVectorMarker(progress: number): __esri.CIMVectorMarker[
             type: "CIMVectorMarker",
             enable: progress > 0 && progress < 1,
             offsetX: 17.5 * (progress - 1),
+            offsetY: -3,
             size: 35,
             anchorPoint: {
                 x: 0,
@@ -221,6 +222,7 @@ function generateProgressVectorMarker(progress: number): __esri.CIMVectorMarker[
             type: "CIMVectorMarker",
             enable: progress > 0 && progress < 1,
             offsetX: 17.5 * progress,
+            offsetY: -3,
             size: 35,
             anchorPoint: {
                 x: 0,
@@ -275,7 +277,7 @@ export function generatePartyPopSymbol(progress: number): __esri.CIMSymbol {
                             y: 0
                         },
                         offsetX: 0,
-                        offsetY: 3,
+                        offsetY: 0,
                         size: 40,
                         scaleX: 1,
                         tintColor: [255, 255, 255, 255],
