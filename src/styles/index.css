@@ -31,3 +31,16 @@ body {
 .cursor-pointer {
     cursor: pointer;
 }
+
+footer {
+    position: absolute;
+    bottom: 16px;
+    left: 0;
+    right: 0;
+    padding: 5px;
+    background: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
+    font-weight: 100;
+    color: #323232;
+    font-family: "Avenir Next", "Avenir", "Helvetica Neue", sans-serif;
+}

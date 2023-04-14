@@ -1,9 +1,8 @@
-import "./styles/index.css";
-
 import Basemap from "@arcgis/core/Basemap";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import Map from "@arcgis/core/Map";
 import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer.js";
+import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import FeatureLayerView from "@arcgis/core/views/layers/FeatureLayerView";
 import MapView from "@arcgis/core/views/MapView";
 import { config as springConfig } from "@react-spring/web";
@@ -12,6 +11,7 @@ import { SymbolAnimationManager } from "arcgis-animate-markers-plugin";
 import { MarkerClickPopAnimation } from "./Utils/MarkerClickPop";
 import { generatePartyPopSymbol, MarkerExplosionAnimation } from "./Utils/MarkerConfettiPop";
 import { MarkerHoverPopAnimation } from "./Utils/MarkerHoverPop";
+import { MarkerOscillateAnimation } from "./Utils/MarkerOscillate";
 import { MarkerRadarPingAnimation } from "./Utils/MarkerRadarPing";
 
 const map = new Map({
@@ -31,6 +31,8 @@ const mapView = new MapView({
 const titleDiv = document.getElementById("titleDiv");
 mapView.ui.add(titleDiv as HTMLElement, "top-right");
 const modeSelect = document.getElementById("modeSelect") as HTMLSelectElement;
+modeSelect.style.display = "block";
+modeSelect.setAttribute("disabled", "");
 modeSelect?.addEventListener("change", (ev) => {
     updateAnimationExample(ev as InputEvent);
 });
@@ -47,7 +49,8 @@ let currentMode:
     | MarkerClickPopAnimation
     | MarkerExplosionAnimation
     | MarkerHoverPopAnimation
-    | MarkerRadarPingAnimation;
+    | MarkerRadarPingAnimation
+    | MarkerOscillateAnimation;
 
 let symbolAnimationManager: SymbolAnimationManager;
 let featureLayerView: FeatureLayerView;
@@ -57,7 +60,8 @@ let allGraphics: __esri.FeatureSet;
 mapView.whenLayerView(featureLayer).then(async (layerView) => {
     allGraphics = await featureLayer.queryFeatures({
         where: "1=1",
-        returnGeometry: true
+        returnGeometry: true,
+        outFields: ["*"]
     });
     featureLayerView = layerView;
     symbolAnimationManager = new SymbolAnimationManager({
@@ -66,14 +70,11 @@ mapView.whenLayerView(featureLayer).then(async (layerView) => {
     });
     originalRenderer = (featureLayer.renderer as SimpleRenderer).clone();
 
-    featureLayer.renderer = new SimpleRenderer({
-        symbol: generatePartyPopSymbol(0)
-    });
-    currentMode = new MarkerExplosionAnimation({
+    currentMode = new MarkerOscillateAnimation({
         symbolAnimationManager,
-        mapView,
-        layerView: featureLayerView
+        graphics: allGraphics.features
     });
+    modeSelect.removeAttribute("disabled");
 });
 
 function updateAnimationExample(event: InputEvent) {
@@ -85,6 +86,7 @@ function updateAnimationExample(event: InputEvent) {
         symbolAnimationManager.removeAllAnimatedGraphics();
         switch (mode) {
             case "radar-ping": {
+                featureLayer.renderer = originalRenderer;
                 currentMode = new MarkerRadarPingAnimation({
                     symbolAnimationManager,
                     graphics: allGraphics.features
@@ -92,9 +94,7 @@ function updateAnimationExample(event: InputEvent) {
                 break;
             }
             case "hover-pop-effect": {
-                featureLayer.renderer = new SimpleRenderer({
-                    symbol: generatePartyPopSymbol(0)
-                });
+                featureLayer.renderer = originalRenderer;
                 currentMode = new MarkerHoverPopAnimation({
                     symbolAnimationManager,
                     mapView,
@@ -122,10 +122,29 @@ function updateAnimationExample(event: InputEvent) {
                 });
                 break;
             }
+            case "oscillate": {
+                featureLayer.renderer = new SimpleRenderer({
+                    symbol: new SimpleMarkerSymbol({
+                        color: [255, 255, 255, 1],
+                        size: 30,
+                        outline: {
+                            color: [255, 150, 0, 1],
+                            style: "solid",
+                            width: 4
+                        }
+                    })
+                });
+                currentMode = new MarkerOscillateAnimation({
+                    symbolAnimationManager,
+                    graphics: allGraphics.features
+                });
+                break;
+            }
             case "custom-animation": {
                 featureLayer.renderer = new SimpleRenderer({
                     symbol: generatePartyPopSymbol(0)
                 });
+
                 currentMode = new MarkerExplosionAnimation({
                     symbolAnimationManager,
                     mapView,

@@ -33,7 +33,7 @@ export class MarkerRadarPingAnimation {
                 color: [255, 255, 255, 0],
                 size: 30,
                 outline: {
-                    color: [255, 0, 0, 0.8],
+                    color: [255, 0, 0, 1],
                     style: "solid",
                     width: 4
                 }
@@ -53,7 +53,7 @@ export class MarkerRadarPingAnimation {
                 isOverlay: true
             });
             newAnimatedGraphic.symbolAnimation.start({
-                to: { scale: 1.7 },
+                to: { scale: 1.7, opacity: 0 },
                 onFinish: () => {
                     this.symbolAnimationManager.removeAnimatedGraphic({
                         graphic: newAnimatedGraphic
