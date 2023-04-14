@@ -69,7 +69,17 @@ mapView.whenLayerView(featureLayer).then(async (layerView) => {
         layerView
     });
     originalRenderer = (featureLayer.renderer as SimpleRenderer).clone();
-
+    featureLayer.renderer = new SimpleRenderer({
+        symbol: new SimpleMarkerSymbol({
+            color: [255, 255, 255, 1],
+            size: 30,
+            outline: {
+                color: [255, 150, 0, 1],
+                style: "solid",
+                width: 4
+            }
+        })
+    });
     currentMode = new MarkerOscillateAnimation({
         symbolAnimationManager,
         graphics: allGraphics.features
