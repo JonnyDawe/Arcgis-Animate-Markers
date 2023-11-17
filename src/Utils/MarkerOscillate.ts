@@ -28,8 +28,8 @@ export class MarkerOscillateAnimation {
             easingConfig: {
                 type: "spring",
                 options: {
-                    tension: 100,
-                    friction: 200,
+                    stiffness: 100,
+                    damping: 200,
                     mass: 1
                 }
             },
@@ -50,8 +50,8 @@ export class MarkerOscillateAnimation {
             easingConfig: {
                 type: "spring",
                 options: {
-                    tension: 100,
-                    friction: 200,
+                    stiffness: 100,
+                    damping: 200,
                     mass: 1
                 }
             },

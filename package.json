@@ -15,8 +15,8 @@
   },
   "dependencies": {
     "@arcgis/core": "^4.26",
-    "@react-spring/web": "^9.7.1",
-    "arcgis-animate-markers-plugin": "^1.1.2",
+    "@react-spring/web": "^9.7.1",    
+    "arcgis-animate-markers-plugin": "^2.0.0",
     "canvas-confetti": "^1.6.0",
     "howler": "^2.2.3"
   },

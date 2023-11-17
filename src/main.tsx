@@ -5,8 +5,7 @@ import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer.js";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import FeatureLayerView from "@arcgis/core/views/layers/FeatureLayerView";
 import MapView from "@arcgis/core/views/MapView";
-import { config as springConfig } from "@react-spring/web";
-import { SymbolAnimationManager } from "arcgis-animate-markers-plugin";
+import { SPRING_PRESETS, SymbolAnimationManager } from "arcgis-animate-markers-plugin";
 
 import { MarkerClickPopAnimation } from "./Utils/MarkerClickPop";
 import { generatePartyPopSymbol, MarkerExplosionAnimation } from "./Utils/MarkerConfettiPop";
@@ -110,7 +109,7 @@ function updateAnimationExample(event: InputEvent) {
                     mapView,
                     layerView: featureLayerView,
                     to: { scale: 1.5, rotate: 10 },
-                    easingConfig: { type: "spring", options: springConfig.molasses }
+                    easingConfig: { type: "spring", options: SPRING_PRESETS.molasses }
                 });
                 break;
             }
@@ -124,9 +123,9 @@ function updateAnimationExample(event: InputEvent) {
                     easingConfig: {
                         type: "spring",
                         options: {
-                            tension: 280,
-                            friction: 40,
-                            mass: 10
+                            stiffness: 200,
+                            damping: 10,
+                            mass: 1
                         }
                     }
                 });
