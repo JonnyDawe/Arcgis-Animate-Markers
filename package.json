@@ -14,9 +14,10 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "@arcgis/core": "^4.27",
+    "@arcgis/core": "^4.29",
     "arcgis-animate-markers-plugin": "^2.1.0",
     "canvas-confetti": "^1.6.0",
+    
     "howler": "^2.2.3"
   },
   "devDependencies": {
@@ -30,11 +31,11 @@
     "eslint-plugin-jsx-a11y": "^6.5.1",
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-simple-import-sort": "^7.0.0",
-    "gh-pages": "^5.0.0",
     "pre-commit": "^1.2.2",
     "prettier": "^2.5.1",
+    "gh-pages": "^6.1.1",
     "typescript": "^4.5.5",
-    "vite": "^4.1.1"
+    "vite": "^5.3.1"
   },
   "license": "MIT"
 }
