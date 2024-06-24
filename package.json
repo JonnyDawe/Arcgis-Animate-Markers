@@ -14,9 +14,8 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "@arcgis/core": "^4.26",
-    "@react-spring/web": "^9.7.1",    
-    "arcgis-animate-markers-plugin": "^2.0.0",
+    "@arcgis/core": "^4.27",
+    "arcgis-animate-markers-plugin": "^2.1.0",
     "canvas-confetti": "^1.6.0",
     "howler": "^2.2.3"
   },

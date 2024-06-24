@@ -143,6 +143,7 @@ export class MarkerExplosionAnimation {
     private animatePointPopEffect(animatedGraphic: IAnimatedGraphic) {
         animatedGraphic.symbolAnimation.start({
             onStep: this.onAnimationStep,
+            to: {},
             onFinish: () => {
                 const screenPoint = this.mapView.toScreen(animatedGraphic.geometry as __esri.Point);
                 this.confetti({
