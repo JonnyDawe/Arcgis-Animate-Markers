@@ -1,1 +1,0 @@
-import{bi as o,f7 as i}from"./vendor-987fb96f.js";const c=96;function a(t,n){const e=n||t.extent,r=t.width,f=o(e&&e.spatialReference);return e&&r?e.width/r*f*i*c:0}function u(t,n){return t/(o(n)*i*c)}export{a as i,u as r};

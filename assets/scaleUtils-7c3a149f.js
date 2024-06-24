@@ -1,0 +1,1 @@
+import{bw as u,gv as i,gw as c}from"./vendor-97e3022f.js";const e=96;function w(n,t){const r=t||n.extent,o=n.width,f=u(r==null?void 0:r.spatialReference);return r&&o?r.width/o*f*i*e:0}function d(n,t){return n/(u(t)*i*e)}function g(n,t,r){return a(n,t)&&s(n,r)}function a(n,t){return t===0||c(n,t)||n<t}function s(n,t){return t===0||c(n,t)||n>t}export{g as d,w as i,d as o};
